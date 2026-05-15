@@ -14,14 +14,10 @@ if (process.env.FIREBASE_SERVICE_ACCOUNT) {
 } else {
     // 로컬 환경용 (파일이 있을 경우에만)
     try {
-        serviceAccount = require('../firebase-key.json');
+        serviceAccount = require('./firebase-key.json');
     } catch (e) {
         console.error("FIREBASE_SERVICE_ACCOUNT env var is missing!");
     }
-}
-
-if (!serviceAccount) {
-    console.error("FIREBASE_SERVICE_ACCOUNT environment variable is missing!");
 }
 
 if (serviceAccount && !admin.apps.length) {
@@ -37,6 +33,12 @@ if (serviceAccount && !admin.apps.length) {
 
 const app = express();
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+// 루트 경로에서 프론트엔드 서빙
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 // Helper to get DB reference safely
 const getDb = () => {
@@ -44,7 +46,7 @@ const getDb = () => {
     return admin.database();
 };
 
-// API 경로만 처리 (정적 파일은 vercel.json에서 처리)
+// API 경로
 app.get('/api/search', async (req, res) => {
     const query = (req.query.name || '').trim();
     if (!query) return res.json([]);
@@ -128,5 +130,10 @@ app.post('/api/update', async (req, res) => {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
+
+const PORT = process.env.PORT || 3000;
+if (require.main === module) {
+    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+}
 
 module.exports = app;
