@@ -103,7 +103,7 @@ app.post('/api/verify', async (req, res) => {
 });
 
 app.post('/api/update', async (req, res) => {
-    const { id, birth, phone, remark } = req.body;
+    const { id, birth, phone, remark, confirmOnly } = req.body;
     try {
         const db = getDb();
         if (!db) return res.status(500).json({ error: 'Firebase not initialized' });
@@ -113,16 +113,27 @@ app.post('/api/update', async (req, res) => {
         if (index === -1) return res.status(404).json({ success: false });
         
         const person = people[index];
-        let changes = [];
-        if (person.birth !== birth) changes.push('생일');
-        if (person.phone !== phone) changes.push('번호');
         let finalRemark = remark || '';
-        if (changes.length > 0) {
-            const changeStr = `(${changes.join(',')}수정)`;
-            if (!finalRemark.includes(changeStr)) finalRemark = finalRemark ? `${finalRemark} ${changeStr}` : changeStr;
+
+        if (confirmOnly) {
+            // 수정사항 없음(확인) 버튼을 누른 경우
+            const confirmStr = '확인';
+            if (!finalRemark.includes(confirmStr)) {
+                finalRemark = finalRemark ? `${finalRemark} ${confirmStr}` : confirmStr;
+            }
+        } else {
+            // 일반 저장 버튼을 누른 경우
+            let changes = [];
+            if (person.birth !== birth) changes.push('생일');
+            if (person.phone !== phone) changes.push('번호');
+            if (changes.length > 0) {
+                const changeStr = `(${changes.join(',')}수정)`;
+                if (!finalRemark.includes(changeStr)) finalRemark = finalRemark ? `${finalRemark} ${changeStr}` : changeStr;
+            }
+            people[index].birth = birth;
+            people[index].phone = phone;
         }
-        people[index].birth = birth;
-        people[index].phone = phone;
+        
         people[index].remark = finalRemark;
         await db.ref('people').set(people);
         res.json({ success: true });

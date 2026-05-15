@@ -245,7 +245,8 @@
                 <input type="text" id="editRemark" placeholder="특이사항이 있다면 적어주세요.">
             </div>
             
-            <button onclick="updateInfo()">저장하기</button>
+            <button onclick="confirmNoChange()" style="background-color: #10B981; margin-bottom: 12px;">수정사항 없음 (확인)</button>
+            <button onclick="updateInfo()">수정내용 저장하기</button>
             <button class="secondary" onclick="showSection('sec-search'); currentUserId = null;">처음으로</button>
         </section>
 
@@ -351,6 +352,26 @@
             showSection('sec-success');
         } else {
             alert('저장 중 오류가 발생했습니다.');
+        }
+    }
+
+    async function confirmNoChange() {
+        const birth = document.getElementById('editBirth').value.trim();
+        const phone = document.getElementById('editPhone').value.trim();
+        const remark = document.getElementById('editRemark').value.trim();
+
+        const res = await fetch('/api/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: currentUserId, birth, phone, remark, confirmOnly: true })
+        });
+        const result = await res.json();
+
+        if (result.success) {
+            document.querySelector('#sec-success p').textContent = '명부 확인이 완료되었습니다.';
+            showSection('sec-success');
+        } else {
+            alert('처리 중 오류가 발생했습니다.');
         }
     }
 </script>
