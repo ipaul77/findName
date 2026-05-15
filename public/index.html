@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>선거인명부 확인 및 수정</title>
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --primary-dark: #4338CA;
+            --bg-color: #F3F4F6;
+            --card-bg: #FFFFFF;
+            --text-main: #111827;
+            --text-muted: #6B7280;
+            --border-color: #E5E7EB;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 480px;
+            background-color: var(--card-bg);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            padding: 24px 20px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        header p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-top: 4px;
+        }
+
+        main {
+            padding: 24px 20px;
+            flex-grow: 1;
+        }
+
+        .section {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-main);
+        }
+
+        input {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.2s;
+            background-color: #F9FAFB;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            background-color: white;
+        }
+
+        button {
+            width: 100%;
+            padding: 16px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.05rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+        }
+
+        button:hover, button:active {
+            background-color: var(--primary-dark);
+        }
+
+        button.secondary {
+            background-color: white;
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            box-shadow: none;
+            margin-top: 10px;
+        }
+
+        .user-card {
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background-color: white;
+        }
+
+        .user-card:active {
+            transform: scale(0.98);
+            background-color: #F9FAFB;
+        }
+
+        .user-card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+            color: var(--primary-dark);
+        }
+
+        .user-card p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .error-message {
+            color: #DC2626;
+            font-size: 0.9rem;
+            margin-top: 8px;
+            display: none;
+        }
+        
+        .empty-state {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 40px 0;
+        }
+
+        .helper-text {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>명부 확인 및 수정</h1>
+        <p>본인의 정보를 안전하게 확인하세요</p>
+    </header>
+
+    <main>
+        <!-- 1. 검색 화면 -->
+        <section id="sec-search" class="section active">
+            <div class="form-group">
+                <label for="searchInput">이름 검색</label>
+                <input type="text" id="searchInput" placeholder="이름을 입력하세요 (예: 홍길동)" autocomplete="off">
+            </div>
+            <button onclick="searchName()">검색하기</button>
+        </section>
+
+        <!-- 2. 검색 결과 (동명이인 선택) 화면 -->
+        <section id="sec-results" class="section">
+            <h2 style="font-size: 1.2rem; margin-bottom: 16px;">검색 결과 <span id="resultCount" style="color:var(--primary)">0</span>건</h2>
+            <div id="resultList"></div>
+            <button class="secondary" onclick="showSection('sec-search')">다시 검색</button>
+        </section>
+
+        <!-- 3. 본인 인증 화면 -->
+        <section id="sec-verify" class="section">
+            <h2 style="font-size: 1.2rem; margin-bottom: 8px;">본인 확인</h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">타인 정보 열람을 방지하기 위해 전체 생년월일이나 전화번호 중 하나를 입력해 주세요.</p>
+            
+            <div class="form-group">
+                <label for="verifyInput">생년월일 또는 전화번호 (숫자만)</label>
+                <input type="tel" id="verifyInput" placeholder="예: 19800101 또는 01012345678">
+                <div id="verifyError" class="error-message">정보가 일치하지 않습니다.</div>
+            </div>
+            
+            <button onclick="verifyUser()">인증하기</button>
+            <button class="secondary" onclick="showSection('sec-results')">뒤로 가기</button>
+        </section>
+
+        <!-- 4. 정보 수정 화면 -->
+        <section id="sec-edit" class="section">
+            <h2 style="font-size: 1.2rem; margin-bottom: 20px;">정보 수정</h2>
+            
+            <div class="form-group">
+                <label>이름</label>
+                <input type="text" id="editName" disabled style="background-color: #E5E7EB; color: #6B7280;">
+            </div>
+            
+            <div class="form-group">
+                <label for="editBirth">생년월일</label>
+                <input type="text" id="editBirth" placeholder="예: 1980-01-01">
+            </div>
+            
+            <div class="form-group">
+                <label for="editPhone">전화번호</label>
+                <input type="tel" id="editPhone" placeholder="예: 010-1234-5678">
+            </div>
+
+            <div class="form-group">
+                <label for="editRemark">비고 (수정사항 등 메모)</label>
+                <input type="text" id="editRemark" placeholder="특이사항이 있다면 적어주세요.">
+            </div>
+            
+            <button onclick="updateInfo()">저장하기</button>
+            <button class="secondary" onclick="showSection('sec-search'); currentUserId = null;">처음으로</button>
+        </section>
+
+        <!-- 5. 완료 화면 -->
+        <section id="sec-success" class="section">
+            <div style="text-align: center; padding: 40px 0;">
+                <div style="font-size: 4rem; margin-bottom: 16px;">✅</div>
+                <h2 style="font-size: 1.4rem; margin-bottom: 8px;">저장 완료!</h2>
+                <p style="color: var(--text-muted); margin-bottom: 24px;">정보가 성공적으로 수정되었습니다.</p>
+                <button onclick="showSection('sec-search')">처음으로 돌아가기</button>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script>
+    let currentUserId = null;
+    let currentUserData = null;
+
+    function showSection(id) {
+        document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        if(id === 'sec-verify') {
+            document.getElementById('verifyInput').value = '';
+            document.getElementById('verifyError').style.display = 'none';
+        }
+    }
+
+    async function searchName() {
+        const name = document.getElementById('searchInput').value.trim();
+        if (!name) {
+            alert('이름을 입력해주세요.');
+            return;
+        }
+
+        const res = await fetch(`/api/search?name=${encodeURIComponent(name)}`);
+        const data = await res.json();
+
+        const listDiv = document.getElementById('resultList');
+        document.getElementById('resultCount').textContent = data.length;
+        listDiv.innerHTML = '';
+
+        if (data.length === 0) {
+            listDiv.innerHTML = '<div class="empty-state">검색 결과가 없습니다.</div>';
+        } else {
+            data.forEach(p => {
+                const card = document.createElement('div');
+                card.className = 'user-card';
+                card.innerHTML = `
+                    <h3>${p.name}</h3>
+                    <p>생년월일: ${p.maskedBirth}</p>
+                    <p>전화번호: ${p.maskedPhone}</p>
+                `;
+                card.onclick = () => {
+                    currentUserId = p.id;
+                    showSection('sec-verify');
+                };
+                listDiv.appendChild(card);
+            });
+        }
+        showSection('sec-results');
+    }
+
+    async function verifyUser() {
+        const secret = document.getElementById('verifyInput').value.trim();
+        if (!secret) {
+            alert('생년월일이나 전화번호를 입력해주세요.');
+            return;
+        }
+
+        const res = await fetch('/api/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: currentUserId, secret })
+        });
+        const result = await res.json();
+
+        if (result.success) {
+            currentUserData = result.data;
+            document.getElementById('editName').value = currentUserData.name;
+            document.getElementById('editBirth').value = currentUserData.birth || '';
+            document.getElementById('editPhone').value = currentUserData.phone || '';
+            document.getElementById('editRemark').value = currentUserData.remark || '';
+            showSection('sec-edit');
+        } else {
+            document.getElementById('verifyError').style.display = 'block';
+        }
+    }
+
+    async function updateInfo() {
+        const birth = document.getElementById('editBirth').value.trim();
+        const phone = document.getElementById('editPhone').value.trim();
+        const remark = document.getElementById('editRemark').value.trim();
+
+        const res = await fetch('/api/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: currentUserId, birth, phone, remark })
+        });
+        const result = await res.json();
+
+        if (result.success) {
+            showSection('sec-success');
+        } else {
+            alert('저장 중 오류가 발생했습니다.');
+        }
+    }
+</script>
+</body>
+</html>
