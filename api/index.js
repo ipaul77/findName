@@ -15,16 +15,29 @@ try {
     }
 }
 
-if (serviceAccount && !admin.apps.length) {
-    admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-        databaseURL: "https://find-name-da412-default-rtdb.asia-southeast1.firebasedatabase.app/"
-    });
+if (!serviceAccount) {
+    console.error("FIREBASE_SERVICE_ACCOUNT environment variable is missing!");
 }
 
-const rtdb = admin.database();
+if (serviceAccount && !admin.apps.length) {
+    try {
+        admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount),
+            databaseURL: "https://find-name-da412-default-rtdb.asia-southeast1.firebasedatabase.app/"
+        });
+    } catch (error) {
+        console.error("Firebase initialization error:", error);
+    }
+}
+
 const app = express();
 app.use(express.json());
+
+// Helper to get DB reference safely
+const getDb = () => {
+    if (!admin.apps.length) return null;
+    return admin.database();
+};
 
 // API 경로만 처리 (정적 파일은 vercel.json에서 처리)
 app.get('/api/search', async (req, res) => {
@@ -32,7 +45,9 @@ app.get('/api/search', async (req, res) => {
     if (!query) return res.json([]);
     
     try {
-        const snapshot = await rtdb.ref('people').once('value');
+        const db = getDb();
+        if (!db) return res.status(500).json({ error: 'Firebase not initialized' });
+        const snapshot = await db.ref('people').once('value');
         const people = snapshot.val() || [];
         const results = people.filter(p => p.name.startsWith(query));
         
@@ -62,7 +77,9 @@ app.get('/api/search', async (req, res) => {
 app.post('/api/verify', async (req, res) => {
     const { id, secret } = req.body;
     try {
-        const snapshot = await rtdb.ref('people').once('value');
+        const db = getDb();
+        if (!db) return res.status(500).json({ error: 'Firebase not initialized' });
+        const snapshot = await db.ref('people').once('value');
         const people = snapshot.val() || [];
         const person = people.find(p => p.id === id);
         if (!person) return res.status(404).json({ success: false });
@@ -81,7 +98,9 @@ app.post('/api/verify', async (req, res) => {
 app.post('/api/update', async (req, res) => {
     const { id, birth, phone, remark } = req.body;
     try {
-        const snapshot = await rtdb.ref('people').once('value');
+        const db = getDb();
+        if (!db) return res.status(500).json({ error: 'Firebase not initialized' });
+        const snapshot = await db.ref('people').once('value');
         let people = snapshot.val() || [];
         const index = people.findIndex(p => p.id === id);
         if (index === -1) return res.status(404).json({ success: false });
@@ -98,7 +117,7 @@ app.post('/api/update', async (req, res) => {
         people[index].birth = birth;
         people[index].phone = phone;
         people[index].remark = finalRemark;
-        await rtdb.ref('people').set(people);
+        await db.ref('people').set(people);
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: 'Internal Server Error' });
