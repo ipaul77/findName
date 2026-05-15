@@ -3,15 +3,20 @@ const admin = require('firebase-admin');
 const path = require('path');
 
 // Firebase 초기화
-// Vercel 환경에서는 파일보다 환경변수를 쓰는 것이 보안상 좋지만, 
-// 우선 파일이 존재하면 파일을 사용하도록 설정합니다.
+// Vercel 환경변수(FIREBASE_SERVICE_ACCOUNT)를 우선적으로 사용합니다.
 let serviceAccount;
-try {
-    serviceAccount = require('../firebase-key.json');
-} catch (e) {
-    // 환경변수에서 가져오는 로직 (Vercel 설정용)
-    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    try {
         serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    } catch (e) {
+        console.error("Firebase env var JSON parse error:", e);
+    }
+} else {
+    // 로컬 환경용 (파일이 있을 경우에만)
+    try {
+        serviceAccount = require('../firebase-key.json');
+    } catch (e) {
+        console.error("FIREBASE_SERVICE_ACCOUNT env var is missing!");
     }
 }
 
